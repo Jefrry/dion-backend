@@ -2,15 +2,16 @@ package main
 
 import (
 	"dion-backend/internal/config"
+	"dion-backend/internal/handler"
 	"dion-backend/internal/lib/logger/handlers/slogpretty"
+	"dion-backend/internal/router"
+	"dion-backend/internal/utils"
 
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/go-chi/chi/v5"
 )
 
 const (
@@ -24,15 +25,14 @@ func main() {
 
 	log := setupLogger(cfg.Env)
 
-	router := chi.NewRouter()
-	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	handlerUtils := utils.NewHandlerUtils()
+	recordsHandler := handler.NewRecordsHandler(log, handlerUtils)
+	r := router.NewRouter(recordsHandler).MustRun()
 
 	log.Info("starting server")
 	srv := &http.Server{
 		Addr:         cfg.Address,
-		Handler:      router,
+		Handler:      r,
 		ReadTimeout:  cfg.HTTPServer.Timeout,
 		WriteTimeout: cfg.HTTPServer.Timeout,
 	}
@@ -82,7 +82,7 @@ func setupPrettySlog() *slog.Logger {
 		},
 	}
 
-	handler := opts.NewPrettyHandler(os.Stdout)
+	loggerHandler := opts.NewPrettyHandler(os.Stdout)
 
-	return slog.New(handler)
+	return slog.New(loggerHandler)
 }
