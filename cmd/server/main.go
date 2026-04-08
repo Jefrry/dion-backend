@@ -2,6 +2,7 @@ package main
 
 import (
 	"dion-backend/internal/config"
+	"dion-backend/internal/db"
 	"dion-backend/internal/handler"
 	"dion-backend/internal/lib/logger/handlers/slogpretty"
 	"dion-backend/internal/router"
@@ -24,6 +25,9 @@ func main() {
 	cfg := config.MustLoad()
 
 	log := setupLogger(cfg.Env)
+
+	gormDB := db.MustConnect(cfg.DBConfig, log)
+	_ = gormDB
 
 	handlerUtils := utils.NewHandlerUtils()
 	recordsHandler := handler.NewRecordsHandler(log, handlerUtils)
