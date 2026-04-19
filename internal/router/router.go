@@ -2,10 +2,10 @@ package router
 
 import (
 	"dion-backend/internal/handler"
-
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Router struct {
@@ -24,6 +24,8 @@ func NewRouter(rh *handler.RecordsHandler, ah *handler.ArtistsHandler) *Router {
 
 func (r *Router) MustRun() http.Handler {
 	router := chi.NewRouter()
+
+	router.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	router.Route("/v1", func(v1 chi.Router) {
 		v1.Route("/recordings", func(rec chi.Router) {

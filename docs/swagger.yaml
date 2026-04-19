@@ -1,0 +1,205 @@
+basePath: /v1
+definitions:
+  domain.Artist:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  domain.Recording:
+    properties:
+      artist:
+        $ref: '#/definitions/domain.Artist'
+      artistID:
+        type: integer
+      concertDate:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      externalURL:
+        type: string
+      id:
+        type: integer
+      moderatedAt:
+        type: string
+      slug:
+        type: string
+      status:
+        $ref: '#/definitions/domain.RecordingStatus'
+      submittedAt:
+        type: string
+      thumbnailURL:
+        type: string
+      title:
+        type: string
+      youtubeID:
+        type: string
+    type: object
+  domain.RecordingStatus:
+    enum:
+    - pending
+    - approved
+    - rejected
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusApproved
+    - StatusRejected
+host: localhost:8080
+info:
+  contact: {}
+  title: Dion API
+  version: "1.0"
+paths:
+  /artists:
+    get:
+      parameters:
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Artist'
+            type: array
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      summary: List artists
+      tags:
+      - artists
+  /artists/{slug}:
+    get:
+      parameters:
+      - description: Artist slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Artist'
+        "404":
+          description: not found
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      summary: Get artist by slug
+      tags:
+      - artists
+  /artists/{slug}/recordings:
+    get:
+      parameters:
+      - description: Artist slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Recording'
+            type: array
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      summary: List recordings by artist slug
+      tags:
+      - recordings
+  /recordings:
+    get:
+      parameters:
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Recording'
+            type: array
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      summary: List approved recordings
+      tags:
+      - recordings
+  /recordings/{slug}:
+    get:
+      parameters:
+      - description: Recording slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Recording'
+        "404":
+          description: not found
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      summary: Get recording by slug
+      tags:
+      - recordings
+swagger: "2.0"

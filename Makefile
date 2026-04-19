@@ -16,5 +16,8 @@ migrate-down:
 migrate-status:
 	goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" status
 
+swagger:
+	$(shell go env GOPATH)/bin/swag init -g cmd/server/main.go -o docs
+
 run:
 	source .env && go run ./cmd/server/main.go

@@ -31,6 +31,15 @@ func (rh *RecordsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	rh.u.WritePlain(w, http.StatusOK, "result")
 }
 
+// GetApprovedList godoc
+// @Summary     List approved recordings
+// @Tags        recordings
+// @Produce     json
+// @Param       limit   query    int  false  "Page size"   default(20)
+// @Param       offset  query    int  false  "Page offset" default(0)
+// @Success     200  {array}   domain.Recording
+// @Failure     500  {string}  string  "internal server error"
+// @Router      /recordings [get]
 func (rh *RecordsHandler) GetApprovedList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
@@ -57,6 +66,16 @@ func (rh *RecordsHandler) GetApprovedList(w http.ResponseWriter, r *http.Request
 	rh.u.WriteJSON(w, http.StatusOK, recordings)
 }
 
+// GetListByArtistSlug godoc
+// @Summary     List recordings by artist slug
+// @Tags        recordings
+// @Produce     json
+// @Param       slug    path     string  true   "Artist slug"
+// @Param       limit   query    int     false  "Page size"   default(20)
+// @Param       offset  query    int     false  "Page offset" default(0)
+// @Success     200  {array}   domain.Recording
+// @Failure     500  {string}  string  "internal server error"
+// @Router      /artists/{slug}/recordings [get]
 func (rh *RecordsHandler) GetListByArtistSlug(w http.ResponseWriter, r *http.Request) {
 	artistSlug := chi.URLParam(r, "slug")
 	q := r.URL.Query()
@@ -84,6 +103,15 @@ func (rh *RecordsHandler) GetListByArtistSlug(w http.ResponseWriter, r *http.Req
 	rh.u.WriteJSON(w, http.StatusOK, recordings)
 }
 
+// GetBySlug godoc
+// @Summary     Get recording by slug
+// @Tags        recordings
+// @Produce     json
+// @Param       slug  path      string  true  "Recording slug"
+// @Success     200   {object}  domain.Recording
+// @Failure     404   {string}  string  "not found"
+// @Failure     500   {string}  string  "internal server error"
+// @Router      /recordings/{slug} [get]
 func (rh *RecordsHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 

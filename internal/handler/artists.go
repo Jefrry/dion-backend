@@ -27,6 +27,15 @@ func NewArtistsHandler(l *slog.Logger, u utils.HandlerUtils, as service.ArtistsS
 	}
 }
 
+// GetList GoDoc
+// @Summary     List artists
+// @Tags        artists
+// @Produce     json
+// @Param       limit   query    int  false  "Page size"   default(20)
+// @Param       offset  query    int  false  "Page offset" default(0)
+// @Success     200  {array}   domain.Artist
+// @Failure     500  {string}  string  "internal server error"
+// @Router      /artists [get]
 func (ah *ArtistsHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
@@ -53,6 +62,15 @@ func (ah *ArtistsHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	ah.u.WriteJSON(w, http.StatusOK, artists)
 }
 
+// GetBySlug godoc
+// @Summary     Get artist by slug
+// @Tags        artists
+// @Produce     json
+// @Param       slug  path      string  true  "Artist slug"
+// @Success     200   {object}  domain.Artist
+// @Failure     404   {string}  string  "not found"
+// @Failure     500   {string}  string  "internal server error"
+// @Router      /artists/{slug} [get]
 func (ah *ArtistsHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 

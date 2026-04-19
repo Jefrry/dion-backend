@@ -1,6 +1,12 @@
+// @title           Dion API
+// @version         1.0
+// @host            localhost:8080
+// @BasePath        /v1
+
 package main
 
 import (
+	_ "dion-backend/docs"
 	"dion-backend/internal/config"
 	"dion-backend/internal/db"
 	"dion-backend/internal/handler"
@@ -55,7 +61,7 @@ func main() {
 		}
 	}()
 
-	log.Info("server started")
+	log.Info("server started", "addr", cfg.Address)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
