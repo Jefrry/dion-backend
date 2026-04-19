@@ -24,7 +24,7 @@ func (r *Router) MustRun() http.Handler {
 	router := chi.NewRouter()
 
 	router.Route("/v1", func(v1 chi.Router) {
-		v1.Get("/records", r.recordsHandler.Get)
+		v1.Get("/recordings", r.recordsHandler.GetApprovedList)
 	})
 
 	r.router = router

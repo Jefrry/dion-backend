@@ -5,7 +5,9 @@ import (
 	"dion-backend/internal/db"
 	"dion-backend/internal/handler"
 	"dion-backend/internal/lib/logger/handlers/slogpretty"
+	"dion-backend/internal/repo"
 	"dion-backend/internal/router"
+	"dion-backend/internal/service"
 	"dion-backend/internal/utils"
 
 	"log/slog"
@@ -27,11 +29,13 @@ func main() {
 	log := setupLogger(cfg.Env)
 
 	gormDB := db.MustConnect(cfg.DBConfig, log)
-	_ = gormDB
+
+	recordingsRepo := repo.NewRecordingsRepo(gormDB)
+	recordingsService := service.NewRecordingsDataService(recordingsRepo)
 
 	handlerUtils := utils.NewHandlerUtils()
-	recordsHandler := handler.NewRecordsHandler(log, handlerUtils)
-	r := router.NewRouter(recordsHandler).MustRun()
+	recordingsHandler := handler.NewRecordingsHandler(log, handlerUtils, recordingsService)
+	r := router.NewRouter(recordingsHandler).MustRun()
 
 	log.Info("starting server")
 	srv := &http.Server{
