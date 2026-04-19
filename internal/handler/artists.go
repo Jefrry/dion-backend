@@ -4,9 +4,13 @@ import (
 	"dion-backend/internal/domain"
 	"dion-backend/internal/service"
 	"dion-backend/internal/utils"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
 )
 
 type ArtistsHandler struct {
@@ -47,4 +51,21 @@ func (ah *ArtistsHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ah.u.WriteJSON(w, http.StatusOK, artists)
+}
+
+func (ah *ArtistsHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
+	slug := chi.URLParam(r, "slug")
+
+	artist, err := ah.as.GetBySlug(r.Context(), slug)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		ah.l.Error("ArtistsService.GetBySlug failed", "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	ah.u.WriteJSON(w, http.StatusOK, artist)
 }

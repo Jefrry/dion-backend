@@ -9,6 +9,7 @@ import (
 
 type ArtistsRepo interface {
 	List(ctx context.Context, p domain.Pagination) ([]domain.Artist, error)
+	GetBySlug(ctx context.Context, slug string) (domain.Artist, error)
 }
 
 type ArtistsDataRepo struct {
@@ -28,4 +29,10 @@ func (r *ArtistsDataRepo) List(ctx context.Context, p domain.Pagination) ([]doma
 		Find(&items).Error
 
 	return items, err
+}
+
+func (r *ArtistsDataRepo) GetBySlug(ctx context.Context, slug string) (domain.Artist, error) {
+	var item domain.Artist
+	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&item).Error
+	return item, err
 }

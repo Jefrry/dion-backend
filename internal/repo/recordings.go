@@ -27,3 +27,9 @@ func (r *RecordingsDataRepo) List(ctx context.Context, statuses []domain.Recordi
 
 	return items, err
 }
+
+func (r *RecordingsDataRepo) GetBySlug(ctx context.Context, slug string) (domain.Recording, error) {
+	var item domain.Recording
+	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&item).Error
+	return item, err
+}

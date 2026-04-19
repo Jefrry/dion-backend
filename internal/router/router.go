@@ -27,7 +27,9 @@ func (r *Router) MustRun() http.Handler {
 
 	router.Route("/v1", func(v1 chi.Router) {
 		v1.Get("/recordings", r.recordsHandler.GetApprovedList)
+		v1.Get("/recordings/{slug}", r.recordsHandler.GetBySlug)
 		v1.Get("/artists", r.artistsHandler.GetList)
+		v1.Get("/artists/{slug}", r.artistsHandler.GetBySlug)
 	})
 
 	r.router = router

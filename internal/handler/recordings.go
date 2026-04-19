@@ -4,10 +4,13 @@ import (
 	"dion-backend/internal/domain"
 	"dion-backend/internal/service"
 	"dion-backend/internal/utils"
-
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
 )
 
 type RecordsHandler struct {
@@ -52,4 +55,21 @@ func (rh *RecordsHandler) GetApprovedList(w http.ResponseWriter, r *http.Request
 	}
 
 	rh.u.WriteJSON(w, http.StatusOK, recordings)
+}
+
+func (rh *RecordsHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
+	slug := chi.URLParam(r, "slug")
+
+	recording, err := rh.rs.GetBySlug(r.Context(), slug)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		rh.l.Error("RecordingsService.GetBySlug failed", "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	rh.u.WriteJSON(w, http.StatusOK, recording)
 }
