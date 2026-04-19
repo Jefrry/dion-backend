@@ -33,9 +33,13 @@ func main() {
 	recordingsRepo := repo.NewRecordingsRepo(gormDB)
 	recordingsService := service.NewRecordingsDataService(recordingsRepo)
 
+	artistsRepo := repo.NewArtistsRepo(gormDB)
+	artistsService := service.NewArtistsDataService(artistsRepo)
+
 	handlerUtils := utils.NewHandlerUtils()
 	recordingsHandler := handler.NewRecordingsHandler(log, handlerUtils, recordingsService)
-	r := router.NewRouter(recordingsHandler).MustRun()
+	artistsHandler := handler.NewArtistsHandler(log, handlerUtils, artistsService)
+	r := router.NewRouter(recordingsHandler, artistsHandler).MustRun()
 
 	log.Info("starting server")
 	srv := &http.Server{
