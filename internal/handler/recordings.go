@@ -57,6 +57,33 @@ func (rh *RecordsHandler) GetApprovedList(w http.ResponseWriter, r *http.Request
 	rh.u.WriteJSON(w, http.StatusOK, recordings)
 }
 
+func (rh *RecordsHandler) GetListByArtistSlug(w http.ResponseWriter, r *http.Request) {
+	artistSlug := chi.URLParam(r, "slug")
+	q := r.URL.Query()
+
+	limit, err := strconv.Atoi(q.Get("limit"))
+	if err != nil || limit <= 0 {
+		limit = 20
+	}
+
+	offset, err := strconv.Atoi(q.Get("offset"))
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	recordings, err := rh.rs.ListByArtistSlug(r.Context(), artistSlug, domain.Pagination{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		rh.l.Error("RecordingsService.ListByArtistSlug failed", "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	rh.u.WriteJSON(w, http.StatusOK, recordings)
+}
+
 func (rh *RecordsHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 

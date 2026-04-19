@@ -33,3 +33,14 @@ func (r *RecordingsDataRepo) GetBySlug(ctx context.Context, slug string) (domain
 	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&item).Error
 	return item, err
 }
+
+func (r *RecordingsDataRepo) ListByArtistSlug(ctx context.Context, artistSlug string, p domain.Pagination) ([]domain.Recording, error) {
+	var items []domain.Recording
+	err := r.db.WithContext(ctx).
+		Joins("JOIN artists ON artists.id = recordings.artist_id").
+		Where("artists.slug = ?", artistSlug).
+		Limit(p.Limit).
+		Offset(p.Offset).
+		Find(&items).Error
+	return items, err
+}

@@ -25,6 +25,10 @@ func (s *RecordingsDataService) GetBySlug(ctx context.Context, slug string) (dom
 	return s.rr.GetBySlug(ctx, slug)
 }
 
+func (s *RecordingsDataService) ListByArtistSlug(ctx context.Context, artistSlug string, p domain.Pagination) ([]domain.Recording, error) {
+	return s.rr.ListByArtistSlug(ctx, artistSlug, p)
+}
+
 func (s *RecordingsDataService) PendingList(ctx context.Context, _ StatusPending, p domain.Pagination) ([]domain.Recording, error) {
 	return s.rr.List(ctx, []domain.RecordingStatus{domain.StatusPending}, p)
 }

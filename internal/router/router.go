@@ -26,10 +26,16 @@ func (r *Router) MustRun() http.Handler {
 	router := chi.NewRouter()
 
 	router.Route("/v1", func(v1 chi.Router) {
-		v1.Get("/recordings", r.recordsHandler.GetApprovedList)
-		v1.Get("/recordings/{slug}", r.recordsHandler.GetBySlug)
-		v1.Get("/artists", r.artistsHandler.GetList)
-		v1.Get("/artists/{slug}", r.artistsHandler.GetBySlug)
+		v1.Route("/recordings", func(rec chi.Router) {
+			rec.Get("/", r.recordsHandler.GetApprovedList)
+			rec.Get("/{slug}", r.recordsHandler.GetBySlug)
+		})
+
+		v1.Route("/artists", func(art chi.Router) {
+			art.Get("/", r.artistsHandler.GetList)
+			art.Get("/{slug}", r.artistsHandler.GetBySlug)
+			art.Get("/{slug}/recordings", r.recordsHandler.GetListByArtistSlug)
+		})
 	})
 
 	r.router = router
