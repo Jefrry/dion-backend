@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"dion-backend/internal/domain"
+	"dion-backend/internal/lib/slug"
 	"dion-backend/internal/repo"
 )
 
@@ -27,6 +30,40 @@ func (s *RecordingsDataService) GetBySlug(ctx context.Context, slug string) (dom
 
 func (s *RecordingsDataService) ListByArtistSlug(ctx context.Context, artistSlug string, p domain.Pagination) ([]domain.Recording, error) {
 	return s.rr.ListByArtistSlug(ctx, artistSlug, p)
+}
+
+func (s *RecordingsDataService) Create(ctx context.Context, input CreateRecordingInput) (domain.Recording, error) {
+	baseSlug := slug.Slugify(input.Title)
+	if baseSlug == "" {
+		baseSlug = "recording"
+	}
+
+	recordingSlug := baseSlug
+
+	for i := 3; ; i++ {
+		exists, err := s.rr.SlugExists(ctx, recordingSlug)
+		if err != nil {
+			return domain.Recording{}, err
+		}
+		if !exists {
+			break
+		}
+
+		recordingSlug = fmt.Sprintf("%s-%d", baseSlug, i)
+	}
+
+	externalURL := strings.TrimSpace(input.ExternalURL)
+	item := domain.Recording{
+		Title:       strings.TrimSpace(input.Title),
+		Slug:        recordingSlug,
+		Description: input.Description,
+		ArtistName:  strings.TrimSpace(input.ArtistName),
+		ConcertDate: input.ConcertDate,
+		ExternalURL: &externalURL,
+		Status:      domain.StatusPending,
+	}
+
+	return s.rr.Create(ctx, item)
 }
 
 func (s *RecordingsDataService) PendingList(ctx context.Context, _ StatusPending, p domain.Pagination) ([]domain.Recording, error) {

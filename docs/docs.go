@@ -192,6 +192,55 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Create recording submission",
+                "parameters": [
+                    {
+                        "description": "Recording submission",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.createRecordingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Recording"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "415": {
+                        "description": "unsupported media type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
             }
         },
         "/recordings/{slug}": {
@@ -259,9 +308,6 @@ const docTemplate = `{
                 "artist": {
                     "$ref": "#/definitions/domain.Artist"
                 },
-                "artistID": {
-                    "type": "integer"
-                },
                 "concertDate": {
                     "type": "string"
                 },
@@ -312,6 +358,26 @@ const docTemplate = `{
                 "StatusApproved",
                 "StatusRejected"
             ]
+        },
+        "handler.createRecordingRequest": {
+            "type": "object",
+            "properties": {
+                "artistName": {
+                    "type": "string"
+                },
+                "concertDate": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "externalURL": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
         }
     }
 }`

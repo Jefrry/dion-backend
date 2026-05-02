@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
@@ -27,8 +29,83 @@ func NewRecordingsHandler(l *slog.Logger, u utils.HandlerUtils, rs service.Recor
 	}
 }
 
-func (rh *RecordsHandler) Get(w http.ResponseWriter, r *http.Request) {
-	rh.u.WritePlain(w, http.StatusOK, "result")
+// Create godoc
+// @Summary     Create recording submission
+// @Tags        recordings
+// @Accept      json
+// @Produce     json
+// @Param       request  body      createRecordingRequest  true  "Recording submission"
+// @Success     201      {object}  domain.Recording
+// @Failure     400      {string}  string  "bad request"
+// @Failure     415      {string}  string  "unsupported media type"
+// @Failure     500      {string}  string  "internal server error"
+// @Router      /recordings [post]
+func (rh *RecordsHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var req createRecordingRequest
+	if ok := rh.u.ReadJSON(w, r, &req); !ok {
+		return
+	}
+
+	input, ok := rh.validateCreateRequest(w, req)
+	if !ok {
+		return
+	}
+
+	recording, err := rh.rs.Create(r.Context(), input)
+	if err != nil {
+		rh.l.Error("RecordingsService.Create failed", "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	rh.u.WriteJSON(w, http.StatusCreated, recording)
+}
+
+func (rh *RecordsHandler) validateCreateRequest(w http.ResponseWriter, req createRecordingRequest) (service.CreateRecordingInput, bool) {
+	rules := []utils.LengthRule{
+		{Field: "title", Value: req.Title, Min: 3, Max: 280, Required: true},
+		{Field: "externalURL", Value: req.ExternalURL, Min: 5, Max: 2048, Required: true},
+		{Field: "artistName", Value: req.ArtistName, Min: 2, Max: 255, Required: true},
+	}
+
+	if req.Description != nil {
+		rules = append(rules, utils.LengthRule{
+			Field: "description", Value: *req.Description, Min: 3, Max: 1000, Required: false,
+		})
+	}
+
+	for _, rule := range rules {
+		if err := utils.ValidateStringLength(rule); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return service.CreateRecordingInput{}, false
+		}
+	}
+
+	var description *string
+	if req.Description != nil {
+		value := strings.TrimSpace(*req.Description)
+		if value != "" {
+			description = &value
+		}
+	}
+
+	var concertDate *time.Time
+	if req.ConcertDate != nil && strings.TrimSpace(*req.ConcertDate) != "" {
+		parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(*req.ConcertDate))
+		if err != nil {
+			http.Error(w, "concertDate must use YYYY-MM-DD format", http.StatusBadRequest)
+			return service.CreateRecordingInput{}, false
+		}
+		concertDate = &parsedDate
+	}
+
+	return service.CreateRecordingInput{
+		Title:       strings.TrimSpace(req.Title),
+		Description: description,
+		ConcertDate: concertDate,
+		ExternalURL: strings.TrimSpace(req.ExternalURL),
+		ArtistName:  strings.TrimSpace(req.ArtistName),
+	}, true
 }
 
 // GetApprovedList godoc

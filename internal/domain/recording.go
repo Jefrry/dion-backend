@@ -15,8 +15,9 @@ type Recording struct {
 	Title        string          `Gorm:"size:500;not null"`
 	Slug         string          `Gorm:"size:500;not null;uniqueIndex"`
 	Description  *string         `Gorm:"type:text"`
-	ArtistID     uint            `Gorm:"not null;index"`
-	Artist       Artist          `Gorm:"foreignKey:ArtistID"`
+	ArtistID     *uint           `json:"-" Gorm:"index"`
+	ArtistName   string          `json:"-" Gorm:"size:255;not null"`
+	Artist       *Artist         `Gorm:"foreignKey:ArtistID"`
 	ConcertDate  *time.Time      `Gorm:"type:date"`
 	YoutubeID    *string         `Gorm:"size:20"`
 	ExternalURL  *string         `Gorm:"type:text"`

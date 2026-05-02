@@ -15,8 +15,6 @@ definitions:
     properties:
       artist:
         $ref: '#/definitions/domain.Artist'
-      artistID:
-        type: integer
       concertDate:
         type: string
       createdAt:
@@ -52,6 +50,19 @@ definitions:
     - StatusPending
     - StatusApproved
     - StatusRejected
+  handler.createRecordingRequest:
+    properties:
+      artistName:
+        type: string
+      concertDate:
+        type: string
+      description:
+        type: string
+      externalURL:
+        type: string
+      title:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -174,6 +185,38 @@ paths:
           schema:
             type: string
       summary: List approved recordings
+      tags:
+      - recordings
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Recording submission
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createRecordingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Recording'
+        "400":
+          description: bad request
+          schema:
+            type: string
+        "415":
+          description: unsupported media type
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      summary: Create recording submission
       tags:
       - recordings
   /recordings/{slug}:
