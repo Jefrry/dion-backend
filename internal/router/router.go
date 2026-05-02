@@ -1,7 +1,9 @@
 package router
 
 import (
+	"dion-backend/internal/config"
 	"dion-backend/internal/handler"
+	"dion-backend/internal/middlewares"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -13,19 +15,24 @@ type Router struct {
 
 	recordsHandler *handler.RecordsHandler
 	artistsHandler *handler.ArtistsHandler
+	adminHandler   *handler.AdminHandler
+	adminConfig    config.AdminConfig
 }
 
-func NewRouter(rh *handler.RecordsHandler, ah *handler.ArtistsHandler) *Router {
+func NewRouter(rh *handler.RecordsHandler, ah *handler.ArtistsHandler, adminHandler *handler.AdminHandler, adminConfig config.AdminConfig) *Router {
 	return &Router{
 		recordsHandler: rh,
 		artistsHandler: ah,
+		adminHandler:   adminHandler,
+		adminConfig:    adminConfig,
 	}
 }
 
 func (r *Router) MustRun() http.Handler {
 	router := chi.NewRouter()
+	adminLoginRateLimiter := middlewares.NewAdminLoginRateLimiter()
 
-	router.Use(corsMiddleware)
+	router.Use(middlewares.CORS)
 
 	router.Get("/swagger/*", httpSwagger.WrapHandler)
 
@@ -41,29 +48,14 @@ func (r *Router) MustRun() http.Handler {
 			art.Get("/{slug}", r.artistsHandler.GetBySlug)
 			art.Get("/{slug}/recordings", r.recordsHandler.GetListByArtistSlug)
 		})
+
+		v1.Route("/admin", func(admin chi.Router) {
+			admin.Use(middlewares.AdminAuth(r.adminConfig))
+			admin.With(adminLoginRateLimiter).Post("/login", r.adminHandler.Login)
+		})
 	})
 
 	r.router = router
 
 	return router
-}
-
-// TODO: Remove it before prod
-func corsMiddleware(next http.Handler) http.Handler {
-	const allowedOrigin = "http://localhost:8082"
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Origin") == allowedOrigin {
-			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type")
-		}
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
 }

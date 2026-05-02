@@ -50,6 +50,20 @@ definitions:
     - StatusPending
     - StatusApproved
     - StatusRejected
+  handler.adminLoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handler.adminLoginResponse:
+    properties:
+      expiresAt:
+        type: string
+      token:
+        type: string
+    type: object
   handler.createRecordingRequest:
     properties:
       artistName:
@@ -69,6 +83,43 @@ info:
   title: Dion API
   version: "1.0"
 paths:
+  /admin/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Admin credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.adminLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.adminLoginResponse'
+        "400":
+          description: bad request
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "415":
+          description: unsupported media type
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      summary: Admin login
+      tags:
+      - admin
   /artists:
     get:
       parameters:

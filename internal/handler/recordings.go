@@ -15,6 +15,13 @@ import (
 	"gorm.io/gorm"
 )
 
+type createRecordingRequest struct {
+	Title       string  `json:"title"`
+	Description *string `json:"description"`
+	ConcertDate *string `json:"concertDate"`
+	ExternalURL string  `json:"externalURL"`
+	ArtistName  string  `json:"artistName"`
+}
 type RecordsHandler struct {
 	l  *slog.Logger
 	u  utils.HandlerUtils

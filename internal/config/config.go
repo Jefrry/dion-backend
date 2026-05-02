@@ -14,6 +14,7 @@ type Config struct {
 	MigrationPath string `yaml:"migration_path" env-default:"./migrations"`
 	HTTPServer    `yaml:"http_server"`
 	DBConfig      `yaml:"db_config"`
+	AdminConfig   `yaml:"admin_config"`
 }
 
 type HTTPServer struct {
@@ -28,6 +29,12 @@ type DBConfig struct {
 	Password string `yaml:"password" env-required:"true" env:"DB_PASSWORD"`
 	Name     string `yaml:"name" env-required:"true" env:"DB_NAME"`
 	SSLMode  string `yaml:"SSLMode" env-required:"true" env:"DB_SSLMODE"`
+}
+
+type AdminConfig struct {
+	Username     string `yaml:"username" env-required:"true" env:"ADMIN_USERNAME"`
+	PasswordHash string `yaml:"password_hash" env-required:"true" env:"ADMIN_PASSWORD_HASH"`
+	JWTSecret    string `yaml:"jwt_secret" env-required:"true" env:"JWT_SECRET"`
 }
 
 func MustLoad() *Config {

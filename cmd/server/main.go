@@ -45,7 +45,8 @@ func main() {
 	handlerUtils := utils.NewHandlerUtils()
 	recordingsHandler := handler.NewRecordingsHandler(log, handlerUtils, recordingsService)
 	artistsHandler := handler.NewArtistsHandler(log, handlerUtils, artistsService)
-	r := router.NewRouter(recordingsHandler, artistsHandler).MustRun()
+	adminHandler := handler.NewAdminHandler(log, handlerUtils, cfg.AdminConfig)
+	r := router.NewRouter(recordingsHandler, artistsHandler, adminHandler, cfg.AdminConfig).MustRun()
 
 	log.Info("starting server")
 	srv := &http.Server{
