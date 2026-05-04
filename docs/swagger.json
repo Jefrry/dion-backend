@@ -120,6 +120,81 @@
                 }
             }
         },
+        "/admin/recordings/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Update recording moderation state",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recording ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Recording moderation update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.updateRecordingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Recording"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "415": {
+                        "description": "unsupported media type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/artists": {
             "get": {
                 "produces": [
@@ -499,6 +574,29 @@
                     "type": "string"
                 },
                 "externalURL": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.updateRecordingRequest": {
+            "type": "object",
+            "properties": {
+                "artistName": {
+                    "type": "string"
+                },
+                "concertDate": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "externalURL": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "title": {

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -21,6 +22,7 @@ import (
 
 type routerRecordingServiceMock struct {
 	pendingCalled bool
+	updateCalled  bool
 }
 
 func (m *routerRecordingServiceMock) List(context.Context, domain.Pagination) ([]domain.Recording, error) {
@@ -37,6 +39,11 @@ func (m *routerRecordingServiceMock) ListByArtistSlug(context.Context, string, d
 
 func (m *routerRecordingServiceMock) Create(context.Context, service.CreateRecordingInput) (domain.Recording, error) {
 	return domain.Recording{}, errors.New("not implemented")
+}
+
+func (m *routerRecordingServiceMock) Update(context.Context, uint, service.UpdateRecordingInput) (domain.Recording, error) {
+	m.updateCalled = true
+	return domain.Recording{ID: 1, Title: "Updated", Slug: "updated", Status: domain.StatusApproved}, nil
 }
 
 func (m *routerRecordingServiceMock) PendingList(context.Context, service.StatusPending, domain.Pagination) ([]domain.Recording, error) {
@@ -92,6 +99,53 @@ func TestAdminPendingRecordingsRouteAuth(t *testing.T) {
 			}
 			if rs.pendingCalled != tt.wantPendingCalled {
 				t.Fatalf("expected pendingCalled=%v, got %v", tt.wantPendingCalled, rs.pendingCalled)
+			}
+		})
+	}
+}
+
+func TestAdminUpdateRecordingRouteAuth(t *testing.T) {
+	tests := []struct {
+		name             string
+		withToken        bool
+		wantStatus       int
+		wantUpdateCalled bool
+	}{
+		{
+			name:             "requires jwt",
+			wantStatus:       http.StatusUnauthorized,
+			wantUpdateCalled: false,
+		},
+		{
+			name:             "allows valid jwt",
+			withToken:        true,
+			wantStatus:       http.StatusOK,
+			wantUpdateCalled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rs := &routerRecordingServiceMock{}
+			cfg := routerTestAdminConfig()
+			rh := handler.NewRecordingsHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), utils.NewHandlerUtils(), rs)
+			r := NewRouter(rh, nil, nil, cfg).MustRun()
+
+			body := `{"title":"Updated title","externalURL":"https://example.com/video","artistName":"Artist","status":"approved"}`
+			req := httptest.NewRequest(http.MethodPatch, "/v1/admin/recordings/1", bytes.NewBufferString(body))
+			req.Header.Set("Content-Type", "application/json")
+			if tt.withToken {
+				req.Header.Set("Authorization", "Bearer "+signRouterTestToken(t, cfg))
+			}
+			rec := httptest.NewRecorder()
+
+			r.ServeHTTP(rec, req)
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("expected status %d, got %d: %s", tt.wantStatus, rec.Code, rec.Body.String())
+			}
+			if rs.updateCalled != tt.wantUpdateCalled {
+				t.Fatalf("expected updateCalled=%v, got %v", tt.wantUpdateCalled, rs.updateCalled)
 			}
 		})
 	}

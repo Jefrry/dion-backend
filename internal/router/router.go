@@ -68,6 +68,7 @@ func (r *Router) MustRun() http.Handler {
 			admin.Use(middlewares.AdminAuth(r.adminConfig))
 			admin.With(adminLoginRateLimiter).Post("/login", r.adminHandler.Login)
 			admin.Get("/recordings/pending", r.recordsHandler.GetPendingList)
+			admin.Patch("/recordings/{id}", r.recordsHandler.Update)
 		})
 	})
 

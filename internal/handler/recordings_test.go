@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,11 +9,15 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"path"
 	"testing"
 
 	"dion-backend/internal/domain"
 	"dion-backend/internal/service"
 	"dion-backend/internal/utils"
+
+	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
 )
 
 type recordingServiceMock struct {
@@ -20,6 +25,11 @@ type recordingServiceMock struct {
 	pendingErr        error
 	pendingPagination domain.Pagination
 	pendingCalled     bool
+	updateRecording   domain.Recording
+	updateErr         error
+	updateID          uint
+	updateInput       service.UpdateRecordingInput
+	updateCalled      bool
 }
 
 func (m *recordingServiceMock) List(context.Context, domain.Pagination) ([]domain.Recording, error) {
@@ -36,6 +46,13 @@ func (m *recordingServiceMock) ListByArtistSlug(context.Context, string, domain.
 
 func (m *recordingServiceMock) Create(context.Context, service.CreateRecordingInput) (domain.Recording, error) {
 	return domain.Recording{}, errors.New("not implemented")
+}
+
+func (m *recordingServiceMock) Update(_ context.Context, id uint, input service.UpdateRecordingInput) (domain.Recording, error) {
+	m.updateCalled = true
+	m.updateID = id
+	m.updateInput = input
+	return m.updateRecording, m.updateErr
 }
 
 func (m *recordingServiceMock) PendingList(_ context.Context, _ service.StatusPending, p domain.Pagination) ([]domain.Recording, error) {
@@ -129,6 +146,145 @@ func TestGetPendingList(t *testing.T) {
 				if recording.Status != domain.StatusPending {
 					t.Fatalf("expected pending recording, got %+v", recording)
 				}
+			}
+		})
+	}
+}
+
+func TestUpdateRecording(t *testing.T) {
+	tests := []struct {
+		name             string
+		target           string
+		contentType      string
+		body             string
+		recording        domain.Recording
+		serviceErr       error
+		wantStatus       int
+		wantUpdateCalled bool
+		wantID           uint
+		wantStatusInput  domain.RecordingStatus
+	}{
+		{
+			name:        "updates approved recording",
+			target:      "/v1/admin/recordings/12",
+			contentType: "application/json",
+			body:        `{"title":"Updated title","description":"Updated description","concertDate":"2026-05-04","externalURL":"https://example.com/video","artistName":"Existing Artist","status":"approved"}`,
+			recording: domain.Recording{
+				ID:     12,
+				Title:  "Updated title",
+				Slug:   "updated-title",
+				Status: domain.StatusApproved,
+			},
+			wantStatus:       http.StatusOK,
+			wantUpdateCalled: true,
+			wantID:           12,
+			wantStatusInput:  domain.StatusApproved,
+		},
+		{
+			name:        "updates rejected recording",
+			target:      "/v1/admin/recordings/7",
+			contentType: "application/json",
+			body:        `{"title":"Rejected title","description":null,"concertDate":null,"externalURL":"https://example.com/video","artistName":"Submitted Artist","status":"rejected"}`,
+			recording: domain.Recording{
+				ID:     7,
+				Title:  "Rejected title",
+				Slug:   "rejected-title",
+				Status: domain.StatusRejected,
+			},
+			wantStatus:       http.StatusOK,
+			wantUpdateCalled: true,
+			wantID:           7,
+			wantStatusInput:  domain.StatusRejected,
+		},
+		{
+			name:             "rejects invalid id",
+			target:           "/v1/admin/recordings/bad",
+			contentType:      "application/json",
+			body:             `{"title":"Updated title","externalURL":"https://example.com/video","artistName":"Artist","status":"approved"}`,
+			wantStatus:       http.StatusBadRequest,
+			wantUpdateCalled: false,
+		},
+		{
+			name:             "rejects invalid status",
+			target:           "/v1/admin/recordings/1",
+			contentType:      "application/json",
+			body:             `{"title":"Updated title","externalURL":"https://example.com/video","artistName":"Artist","status":"pending"}`,
+			wantStatus:       http.StatusBadRequest,
+			wantUpdateCalled: false,
+		},
+		{
+			name:             "rejects invalid date",
+			target:           "/v1/admin/recordings/1",
+			contentType:      "application/json",
+			body:             `{"title":"Updated title","concertDate":"04-05-2026","externalURL":"https://example.com/video","artistName":"Artist","status":"approved"}`,
+			wantStatus:       http.StatusBadRequest,
+			wantUpdateCalled: false,
+		},
+		{
+			name:             "rejects wrong content type",
+			target:           "/v1/admin/recordings/1",
+			contentType:      "text/plain",
+			body:             `{"title":"Updated title","externalURL":"https://example.com/video","artistName":"Artist","status":"approved"}`,
+			wantStatus:       http.StatusUnsupportedMediaType,
+			wantUpdateCalled: false,
+		},
+		{
+			name:             "maps not found",
+			target:           "/v1/admin/recordings/1",
+			contentType:      "application/json",
+			body:             `{"title":"Updated title","externalURL":"https://example.com/video","artistName":"Artist","status":"approved"}`,
+			serviceErr:       gorm.ErrRecordNotFound,
+			wantStatus:       http.StatusNotFound,
+			wantUpdateCalled: true,
+			wantID:           1,
+			wantStatusInput:  domain.StatusApproved,
+		},
+		{
+			name:             "maps service error",
+			target:           "/v1/admin/recordings/1",
+			contentType:      "application/json",
+			body:             `{"title":"Updated title","externalURL":"https://example.com/video","artistName":"Artist","status":"approved"}`,
+			serviceErr:       errors.New("database unavailable"),
+			wantStatus:       http.StatusInternalServerError,
+			wantUpdateCalled: true,
+			wantID:           1,
+			wantStatusInput:  domain.StatusApproved,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rs := &recordingServiceMock{
+				updateRecording: tt.recording,
+				updateErr:       tt.serviceErr,
+			}
+			rh := newTestRecordsHandler(rs)
+
+			req := httptest.NewRequest(http.MethodPatch, tt.target, bytes.NewBufferString(tt.body))
+			routeCtx := chi.NewRouteContext()
+			routeCtx.URLParams.Add("id", path.Base(req.URL.Path))
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+			if tt.contentType != "" {
+				req.Header.Set("Content-Type", tt.contentType)
+			}
+			rec := httptest.NewRecorder()
+
+			rh.Update(rec, req)
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("expected status %d, got %d: %s", tt.wantStatus, rec.Code, rec.Body.String())
+			}
+			if rs.updateCalled != tt.wantUpdateCalled {
+				t.Fatalf("expected updateCalled=%v, got %v", tt.wantUpdateCalled, rs.updateCalled)
+			}
+			if !tt.wantUpdateCalled {
+				return
+			}
+			if rs.updateID != tt.wantID {
+				t.Fatalf("expected id %d, got %d", tt.wantID, rs.updateID)
+			}
+			if rs.updateInput.Status != tt.wantStatusInput {
+				t.Fatalf("expected status input %q, got %q", tt.wantStatusInput, rs.updateInput.Status)
 			}
 		})
 	}

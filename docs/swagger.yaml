@@ -77,6 +77,21 @@ definitions:
       title:
         type: string
     type: object
+  handler.updateRecordingRequest:
+    properties:
+      artistName:
+        type: string
+      concertDate:
+        type: string
+      description:
+        type: string
+      externalURL:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -118,6 +133,54 @@ paths:
           schema:
             type: string
       summary: Admin login
+      tags:
+      - admin
+  /admin/recordings/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Recording ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Recording moderation update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateRecordingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Recording'
+        "400":
+          description: bad request
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "404":
+          description: not found
+          schema:
+            type: string
+        "415":
+          description: unsupported media type
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update recording moderation state
       tags:
       - admin
   /admin/recordings/pending:

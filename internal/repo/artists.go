@@ -7,11 +7,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type ArtistsRepo interface {
-	List(ctx context.Context, p domain.Pagination) ([]domain.Artist, error)
-	GetBySlug(ctx context.Context, slug string) (domain.Artist, error)
-}
-
 type ArtistsDataRepo struct {
 	db *gorm.DB
 }
@@ -35,4 +30,14 @@ func (r *ArtistsDataRepo) GetBySlug(ctx context.Context, slug string) (domain.Ar
 	var item domain.Artist
 	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&item).Error
 	return item, err
+}
+
+func (r *ArtistsDataRepo) SlugExists(ctx context.Context, slug string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&domain.Artist{}).
+		Where("slug = ?", slug).
+		Count(&count).Error
+
+	return count > 0, err
 }

@@ -40,9 +40,8 @@ func main() {
 	gormDB := db.MustConnect(cfg.DBConfig, log)
 
 	recordingsRepo := repo.NewRecordingsRepo(gormDB)
-	recordingsService := service.NewRecordingsDataService(recordingsRepo)
-
 	artistsRepo := repo.NewArtistsRepo(gormDB)
+	recordingsService := service.NewRecordingsDataService(recordingsRepo, artistsRepo)
 	artistsService := service.NewArtistsDataService(artistsRepo)
 
 	handlerUtils := utils.NewHandlerUtils()

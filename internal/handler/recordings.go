@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"dion-backend/internal/domain"
 	"dion-backend/internal/service"
 	"dion-backend/internal/utils"
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +22,12 @@ type createRecordingRequest struct {
 	ExternalURL string  `json:"externalURL"`
 	ArtistName  string  `json:"artistName"`
 }
+
+type updateRecordingRequest struct {
+	createRecordingRequest
+	Status string `json:"status"`
+}
+
 type RecordsHandler struct {
 	l  *slog.Logger
 	u  utils.HandlerUtils
@@ -66,6 +74,52 @@ func (rh *RecordsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	rh.u.WriteJSON(w, http.StatusCreated, recording)
 }
 
+// Update godoc
+// @Summary     Update recording moderation state
+// @Tags        admin
+// @Accept      json
+// @Produce     json
+// @Param       id       path      int                     true  "Recording ID"
+// @Param       request  body      updateRecordingRequest  true  "Recording moderation update"
+// @Success     200      {object}  domain.Recording
+// @Failure     400      {string}  string  "bad request"
+// @Failure     401      {string}  string  "unauthorized"
+// @Failure     404      {string}  string  "not found"
+// @Failure     415      {string}  string  "unsupported media type"
+// @Failure     500      {string}  string  "internal server error"
+// @Security    BearerAuth
+// @Router      /admin/recordings/{id} [patch]
+func (rh *RecordsHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 64)
+	if err != nil || id == 0 {
+		http.Error(w, "invalid recording id", http.StatusBadRequest)
+		return
+	}
+
+	var req updateRecordingRequest
+	if ok := rh.u.ReadJSON(w, r, &req); !ok {
+		return
+	}
+
+	input, ok := validateUpdateRequest(w, req)
+	if !ok {
+		return
+	}
+
+	recording, err := rh.rs.Update(r.Context(), uint(id), input)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		rh.l.Error("RecordingsService.Update failed", "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	rh.u.WriteJSON(w, http.StatusOK, recording)
+}
+
 func validateCreateRequest(w http.ResponseWriter, req createRecordingRequest) (service.CreateRecordingInput, bool) {
 	rules := []utils.LengthRule{
 		{Field: "title", Value: req.Title, Min: 3, Max: 280, Required: true},
@@ -110,6 +164,34 @@ func validateCreateRequest(w http.ResponseWriter, req createRecordingRequest) (s
 		ConcertDate: concertDate,
 		ExternalURL: strings.TrimSpace(req.ExternalURL),
 		ArtistName:  strings.TrimSpace(req.ArtistName),
+	}, true
+}
+
+func validateUpdateRequest(w http.ResponseWriter, req updateRecordingRequest) (service.UpdateRecordingInput, bool) {
+	createInput, ok := validateCreateRequest(w, createRecordingRequest{
+		Title:       req.Title,
+		Description: req.Description,
+		ConcertDate: req.ConcertDate,
+		ExternalURL: req.ExternalURL,
+		ArtistName:  req.ArtistName,
+	})
+	if !ok {
+		return service.UpdateRecordingInput{}, false
+	}
+
+	status := domain.RecordingStatus(strings.TrimSpace(req.Status))
+	if status != domain.StatusApproved && status != domain.StatusRejected {
+		http.Error(w, "status must be approved or rejected", http.StatusBadRequest)
+		return service.UpdateRecordingInput{}, false
+	}
+
+	return service.UpdateRecordingInput{
+		Title:       createInput.Title,
+		Description: createInput.Description,
+		ConcertDate: createInput.ConcertDate,
+		ExternalURL: createInput.ExternalURL,
+		ArtistName:  createInput.ArtistName,
+		Status:      status,
 	}, true
 }
 
