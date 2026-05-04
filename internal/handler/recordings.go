@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"dion-backend/internal/domain"
 	"dion-backend/internal/service"
 	"dion-backend/internal/utils"
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -53,7 +51,7 @@ func (rh *RecordsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input, ok := rh.validateCreateRequest(w, req)
+	input, ok := validateCreateRequest(w, req)
 	if !ok {
 		return
 	}
@@ -68,7 +66,7 @@ func (rh *RecordsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	rh.u.WriteJSON(w, http.StatusCreated, recording)
 }
 
-func (rh *RecordsHandler) validateCreateRequest(w http.ResponseWriter, req createRecordingRequest) (service.CreateRecordingInput, bool) {
+func validateCreateRequest(w http.ResponseWriter, req createRecordingRequest) (service.CreateRecordingInput, bool) {
 	rules := []utils.LengthRule{
 		{Field: "title", Value: req.Title, Min: 3, Max: 280, Required: true},
 		{Field: "externalURL", Value: req.ExternalURL, Min: 5, Max: 2048, Required: true},
@@ -125,24 +123,35 @@ func (rh *RecordsHandler) validateCreateRequest(w http.ResponseWriter, req creat
 // @Failure     500  {string}  string  "internal server error"
 // @Router      /recordings [get]
 func (rh *RecordsHandler) GetApprovedList(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
+	pagination := parsePagination(r)
 
-	limit, err := strconv.Atoi(q.Get("limit"))
-	if err != nil || limit <= 0 {
-		limit = 20
-	}
-
-	offset, err := strconv.Atoi(q.Get("offset"))
-	if err != nil || offset < 0 {
-		offset = 0
-	}
-
-	recordings, err := rh.rs.ApprovedList(r.Context(), service.StatusApproved{}, domain.Pagination{
-		Limit:  limit,
-		Offset: offset,
-	})
+	recordings, err := rh.rs.ApprovedList(r.Context(), service.StatusApproved{}, pagination)
 	if err != nil {
 		rh.l.Error("ApprovedList failed", "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	rh.u.WriteJSON(w, http.StatusOK, recordings)
+}
+
+// GetPendingList godoc
+// @Summary     List pending recordings
+// @Tags        admin
+// @Produce     json
+// @Param       limit   query    int  false  "Page size"   default(20)
+// @Param       offset  query    int  false  "Page offset" default(0)
+// @Success     200  {array}   domain.Recording
+// @Failure     401  {string}  string  "unauthorized"
+// @Failure     500  {string}  string  "internal server error"
+// @Security    BearerAuth
+// @Router      /admin/recordings/pending [get]
+func (rh *RecordsHandler) GetPendingList(w http.ResponseWriter, r *http.Request) {
+	pagination := parsePagination(r)
+
+	recordings, err := rh.rs.PendingList(r.Context(), service.StatusPending{}, pagination)
+	if err != nil {
+		rh.l.Error("PendingList failed", "err", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -162,22 +171,9 @@ func (rh *RecordsHandler) GetApprovedList(w http.ResponseWriter, r *http.Request
 // @Router      /artists/{slug}/recordings [get]
 func (rh *RecordsHandler) GetListByArtistSlug(w http.ResponseWriter, r *http.Request) {
 	artistSlug := chi.URLParam(r, "slug")
-	q := r.URL.Query()
+	pagination := parsePagination(r)
 
-	limit, err := strconv.Atoi(q.Get("limit"))
-	if err != nil || limit <= 0 {
-		limit = 20
-	}
-
-	offset, err := strconv.Atoi(q.Get("offset"))
-	if err != nil || offset < 0 {
-		offset = 0
-	}
-
-	recordings, err := rh.rs.ListByArtistSlug(r.Context(), artistSlug, domain.Pagination{
-		Limit:  limit,
-		Offset: offset,
-	})
+	recordings, err := rh.rs.ListByArtistSlug(r.Context(), artistSlug, pagination)
 	if err != nil {
 		rh.l.Error("RecordingsService.ListByArtistSlug failed", "err", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)

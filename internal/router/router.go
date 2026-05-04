@@ -10,6 +10,15 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+const swaggerBearerRequestInterceptor = `(request) => {
+  const authorization = request.headers.Authorization || request.headers.authorization;
+  if (authorization && !/^Bearer\s+/i.test(authorization)) {
+    request.headers.Authorization = "Bearer " + authorization;
+    delete request.headers.authorization;
+  }
+  return request;
+}`
+
 type Router struct {
 	router *chi.Mux
 
@@ -34,7 +43,13 @@ func (r *Router) MustRun() http.Handler {
 
 	router.Use(middlewares.CORS)
 
-	router.Get("/swagger/*", httpSwagger.WrapHandler)
+	router.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.PersistAuthorization(true),
+		httpSwagger.UIConfig(map[string]string{
+			"requestInterceptor": swaggerBearerRequestInterceptor,
+			"showMutatedRequest": "true",
+		}),
+	))
 
 	router.Route("/v1", func(v1 chi.Router) {
 		v1.Route("/recordings", func(rec chi.Router) {
@@ -52,6 +67,7 @@ func (r *Router) MustRun() http.Handler {
 		v1.Route("/admin", func(admin chi.Router) {
 			admin.Use(middlewares.AdminAuth(r.adminConfig))
 			admin.With(adminLoginRateLimiter).Post("/login", r.adminHandler.Login)
+			admin.Get("/recordings/pending", r.recordsHandler.GetPendingList)
 		})
 	})
 

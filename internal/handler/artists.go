@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"dion-backend/internal/domain"
 	"dion-backend/internal/service"
 	"dion-backend/internal/utils"
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
@@ -37,22 +35,9 @@ func NewArtistsHandler(l *slog.Logger, u utils.HandlerUtils, as service.ArtistsS
 // @Failure     500  {string}  string  "internal server error"
 // @Router      /artists [get]
 func (ah *ArtistsHandler) GetList(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
+	pagination := parsePagination(r)
 
-	limit, err := strconv.Atoi(q.Get("limit"))
-	if err != nil || limit <= 0 {
-		limit = 20
-	}
-
-	offset, err := strconv.Atoi(q.Get("offset"))
-	if err != nil || offset < 0 {
-		offset = 0
-	}
-
-	artists, err := ah.as.List(r.Context(), domain.Pagination{
-		Limit:  limit,
-		Offset: offset,
-	})
+	artists, err := ah.as.List(r.Context(), pagination)
 	if err != nil {
 		ah.l.Error("ArtistsService.List failed", "err", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
